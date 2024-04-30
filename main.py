@@ -24,8 +24,10 @@ while i < 1025:
 
     measures.write(str(i) + '|' + check_time(naive))
 
-    rects_in_tree(measures)
     rects_on_map(measures)
+
+    rects_in_tree(measures)
+
     measures.write('\n')
 
     i *= 2

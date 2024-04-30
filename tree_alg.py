@@ -108,6 +108,8 @@ def rects_in_tree(measures):
         times.append((end - start).total_seconds() * 1000)
     measures.write(f"|{(sum(times) / 1000):.5}")
 
+    times.clear()
+
     for t in range(1000):
         start = datetime.now()
 
