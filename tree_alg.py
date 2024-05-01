@@ -1,4 +1,3 @@
-from datetime import datetime
 from additional import points, compress_coordinates, find_compressed
 
 
@@ -22,12 +21,15 @@ class Event:
 
 class SegmentTree:
     def __init__(self, zero_root: Node):
-        self.roots = {0: zero_root}
+        self.roots = [zero_root]
 
     def updateTree(self, event: Event):
-        base_root = self.roots.get(list(self.roots.keys())[-1])
+        base_root = self.roots[-1]
 
-        self.roots[event.x] = build_on_base(base_root, base_root.start, base_root.end, event)
+        if len(self.roots) <= event.x:
+            self.roots.append(build_on_base(base_root, base_root.start, base_root.end, event))
+        else:
+            self.roots[event.x] = build_on_base(base_root, base_root.start, base_root.end, event)
 
 
 # ADDITIONAL FUNCTIONS
@@ -53,14 +55,15 @@ def build(start, end):
 
 
 def build_on_base(base_root: Node, start, end, event: Event):
-    if end < start:
-        return None
-    if base_root and segments_intersect(event.y1, event.y2, base_root.start, base_root.end):
-        return Node(start, end, base_root.q + event.q,
-                    left_child=build_on_base(base_root.left_child, start, start + (end - start) // 2, event),
-                    right_child=build_on_base(base_root.right_child, start + (end - start) // 2 + 1, end, event))
-    else:
+    if not base_root or not segments_intersect(event.y1, event.y2, base_root.start, base_root.end):
         return base_root
+
+    if event.y1 <= base_root.start and base_root.end <= event.y2:
+        return Node(start, end, base_root.q + event.q, base_root.left_child, base_root.right_child)
+
+    return Node(start, end, base_root.q,
+                build_on_base(base_root.left_child, start, start + (end - start) // 2, event),
+                build_on_base(base_root.right_child, start + (end - start) // 2 + 1, end, event))
 
 
 def find_in_tree(root: Node, y):
@@ -71,57 +74,28 @@ def find_in_tree(root: Node, y):
         return root.q
 
     if y <= root.start + (root.end - root.start) // 2:
-        return find_in_tree(root.left_child, y)
-    return find_in_tree(root.right_child, y)
-
-
-def print_tree(root: Node):
-    if root:
-        print_tree(root.left_child)
-        print_tree(root.right_child)
-
-        if root.start == root.end:
-            print(root.q, end=" ")
+        return root.q + find_in_tree(root.left_child, y)
+    return root.q + find_in_tree(root.right_child, y)
 
 
 # MAIN
-def rects_in_tree(measures):
-    compressed_rectangles, compressed_x, compressed_y = [], [], []
-    events, segment_tree, keys = [], None, []
+def rects_in_tree():
+    compressed_rectangles, compressed_x, compressed_y = compress_coordinates()
 
-    times = []
-    for t in range(1000):
-        start = datetime.now()
+    events = get_events(compressed_rectangles)
 
-        compressed_rectangles, compressed_x, compressed_y = compress_coordinates()
+    segment_tree = SegmentTree(build(0, 0 + (len(compressed_y) != 0) * len(compressed_y) - 1))
 
-        events = get_events(compressed_rectangles)
+    for event in events:
+        segment_tree.updateTree(event)
 
-        segment_tree = SegmentTree(build(0, 0 + (len(compressed_y) != 0) * len(compressed_y) - 1))
+    max_x = len(segment_tree.roots)
 
-        for event in events:
-            segment_tree.updateTree(event)
+    for point in points:
+        if len(compressed_rectangles) and point[0] >= 0 and point[1] >= 0:
+            compressed_point = find_compressed(point, compressed_x, compressed_y)
 
-        keys = list(segment_tree.roots.keys())
+            if compressed_point[0] > max_x:
+                compressed_point[0] = max_x
 
-        end = datetime.now()
-        times.append((end - start).total_seconds() * 1000)
-    measures.write(f"|{(sum(times) / 1000):.5}")
-
-    times.clear()
-
-    for t in range(1000):
-        start = datetime.now()
-
-        for point in points:
-            if len(compressed_rectangles) and point[0] >= 0 and point[1] >= 0:
-                compressed_point = find_compressed(point, compressed_x, compressed_y)
-
-                if compressed_point[0] > keys[-1]:
-                    compressed_point[0] = keys[-1]
-
-                a = find_in_tree(segment_tree.roots.get(compressed_point[0]), compressed_point[1])
-
-        end = datetime.now()
-        times.append((end - start).total_seconds() * 1000)
-    measures.write(f"|{(sum(times) / 1000):.5}")
+            a = find_in_tree(segment_tree.roots[compressed_point[0]], compressed_point[1])

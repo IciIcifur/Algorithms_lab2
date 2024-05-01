@@ -2,7 +2,6 @@ from datetime import datetime
 from random import randint, seed
 
 # CONST VALUES
-max_n = 20
 primes = []
 
 rectangles = []
@@ -15,14 +14,14 @@ def generate_n():
     return randint(0, 15)
 
 
-def generate_point(i):
+def generate_point(n, i):
     seed()
-    return [(primes[(randint(0, len(primes) - 1))] * i) ** 31 % (20 * max_n),
-            (primes[(randint(0, len(primes) - 1))] * i) ** 31 % (20 * max_n)]
+    return [(primes[(randint(0, len(primes) - 1))] * i) ** 31 % (20 * n),
+            (primes[(randint(0, len(primes) - 1))] * i) ** 31 % (20 * n)]
 
 
-def generate_rectangle(i):
-    return [10 * i, 10 * i, 10 * (2 * max_n - i), 10 * (2 * max_n - i)]
+def generate_rectangle(n, i):
+    return [10 * i, 10 * i, 10 * (2 * n - i), 10 * (2 * n - i)]
 
 
 # COMPRESSION
@@ -83,13 +82,15 @@ def printObj(obj):
     print()
 
 
-def check_time(function):
+def check_time(function, q):
     times = []
-    for t in range(1000):
+    for t in range(q):
         start = datetime.now()
 
         function()
 
         end = datetime.now()
-        times.append((end - start).total_seconds() * 1000)
-    return f"{(sum(times) / 1000):.5}"
+        times.append((end - start).total_seconds())
+
+    print(function)
+    return f"{(sum(times) / len(times)):.5}"
